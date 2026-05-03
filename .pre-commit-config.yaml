@@ -1,33 +1,25 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-      - id: check-json
       - id: check-added-large-files
       - id: check-merge-conflict
 
   - repo: local
     hooks:
-      - id: eslint
-        name: ESLint
-        entry: npm run lint
+      - id: swiftformat
+        name: SwiftFormat
+        entry: swiftformat
         language: system
-        types: [javascript, typescript, tsx]
-        require_serial: true
+        types_or: [swift]
+        require_serial: false
 
-      - id: type-check
-        name: TypeScript Type Check
-        entry: npm run type-check
+      - id: swiftlint
+        name: SwiftLint
+        entry: swiftlint lint --quiet
         language: system
-        files: \.(ts|tsx)$
-        require_serial: true
-
-      - id: test
-        name: Run Tests
-        entry: npm test -- --passWithNoTests --watchAll=false
-        language: system
-        types: [javascript, typescript, tsx]
-        require_serial: true
+        types_or: [swift]
+        require_serial: false
