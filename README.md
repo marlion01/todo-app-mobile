@@ -52,10 +52,12 @@ TodoApp/
 │   ├── TodoItem.swift              # Todo 本体 (categoryId / tags を保持)
 │   ├── Category.swift              # カテゴリ (id / name / colorHex)
 │   ├── Tag.swift                   # タグ正規化ユーティリティ
-│   └── TodoFilter.swift            # 絞り込み条件 (検索クエリ用フィールド込み)
+│   ├── TodoFilter.swift            # 絞り込み条件 (検索クエリ用フィールド込み)
+│   └── AppSettings.swift           # 設定 (テーマ / 文字サイズ / アクセント / 表示)
 ├── ViewModels/
 │   ├── TodoListViewModel.swift     # 一覧 + フィルタ + タグ操作
-│   └── CategoryListViewModel.swift # カテゴリ CRUD
+│   ├── CategoryListViewModel.swift # カテゴリ CRUD
+│   └── AppSettingsViewModel.swift  # 設定の読み書き
 ├── Views/
 │   ├── ContentView.swift
 │   ├── TodoListView.swift          # フィルタバー + リスト
@@ -63,12 +65,15 @@ TodoApp/
 │   ├── AddTodoView.swift           # カテゴリ Picker + タグ入力
 │   ├── FilterBarView.swift         # カテゴリチップによる絞り込み
 │   ├── CategoryBadgeView.swift
-│   └── CategoryManagementView.swift
+│   ├── CategoryManagementView.swift
+│   └── SettingsView.swift          # 設定画面
 ├── Services/
 │   ├── TodoStore.swift             # Todo 永続化 (UserDefaults / InMemory)
-│   └── CategoryStore.swift         # Category 永続化
+│   ├── CategoryStore.swift         # Category 永続化
+│   └── AppSettingsStore.swift      # 設定永続化
 ├── Support/
-│   └── Color+Hex.swift
+│   ├── Color+Hex.swift
+│   └── AppSettings+SwiftUI.swift   # AppTheme / FontSizeScale → SwiftUI ブリッジ
 └── Resources/
     ├── Assets.xcassets/
     └── Info.plist
@@ -92,8 +97,21 @@ TodoAppUITests/                     # XCUITest
 - `TodoFilter.searchQuery` は次フェーズの **タグ検索 / カテゴリ内検索** 実装用に
   事前に確保されており、`setSearchQuery(_:)` で書き込むだけで一覧に反映されます。
 
+### 設定 (Settings)
+
+`SettingsView` から以下を変更でき、`UserDefaults` に保存されます。
+ルート (`TodoAppApp`) で `preferredColorScheme` / `dynamicTypeSize` / `tint` を
+適用しているため、設定変更は即座にアプリ全体へ反映されます。
+
+- **テーマ**: システム / ライト / ダーク
+- **文字サイズ**: 小 / 標準 / 大 / 特大 (`DynamicTypeSize` にマップ)
+- **アクセントカラー**: 9 色のプリセットから選択
+- **完了済み Todo の表示切替**: 一覧に出すかどうか (データは消えません)
+- **データ操作**: 設定を初期値に戻す / Todo を全て削除 / カテゴリを全て削除
+- **バージョン情報**: `CFBundleShortVersionString` と `CFBundleVersion` を表示
+
 ### 旧データとの互換性
 
-`TodoItem` に `categoryId` / `tags` を追加した際の互換性を保つため、
-`init(from:)` で `decodeIfPresent` を用いてデフォルト値を補います
-(旧 JSON はそのまま復元可能。`TodoItemCodableTests` で検証)。
+`TodoItem` に `categoryId` / `tags` を追加した際、および `AppSettings` の
+将来的なフィールド追加に備え、`init(from:)` で `decodeIfPresent` を用いて
+デフォルト値を補います (`TodoItemCodableTests` / `AppSettingsCodableTests` で検証)。

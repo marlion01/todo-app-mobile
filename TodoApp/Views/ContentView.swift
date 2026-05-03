@@ -14,7 +14,9 @@ struct ContentView: View {
         TodoItem(title: "原稿を書く", isCompleted: true, categoryId: category.id, tags: ["執筆"]),
         TodoItem(title: "ジムに行く", dueDate: Date().addingTimeInterval(3600 * 24))
     ]))
+    let settingsVM = AppSettingsViewModel(store: InMemoryAppSettingsStore())
     return ContentView()
         .environmentObject(todoVM)
         .environmentObject(categoryVM)
+        .environmentObject(settingsVM)
 }

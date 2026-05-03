@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TodoListView: View {
     @EnvironmentObject private var viewModel: TodoListViewModel
+    @EnvironmentObject private var settingsViewModel: AppSettingsViewModel
     @State private var isPresentingAddSheet = false
 
     var body: some View {
@@ -11,7 +12,7 @@ struct TodoListView: View {
                     .padding(.vertical, 8)
                 Divider()
                 Group {
-                    if viewModel.filteredItems.isEmpty {
+                    if displayedItems.isEmpty {
                         emptyState
                     } else {
                         list
@@ -20,11 +21,16 @@ struct TodoListView: View {
             }
             .navigationTitle("Todo")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItemGroup(placement: .topBarLeading) {
                     NavigationLink {
                         CategoryManagementView()
                     } label: {
                         Label("カテゴリ", systemImage: "folder")
+                    }
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Label("設定", systemImage: "gearshape")
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -65,9 +71,16 @@ struct TodoListView: View {
         }
     }
 
+    /// `filter` (カテゴリ/タグ/検索) と設定 `showCompletedTodos` の両方を適用した表示用リスト。
+    private var displayedItems: [TodoItem] {
+        let base = viewModel.filteredItems
+        guard !settingsViewModel.settings.showCompletedTodos else { return base }
+        return base.filter { !$0.isCompleted }
+    }
+
     private var list: some View {
         List {
-            ForEach(viewModel.filteredItems) { item in
+            ForEach(displayedItems) { item in
                 TodoRowView(item: item) {
                     viewModel.toggle(item)
                 }
@@ -77,9 +90,9 @@ struct TodoListView: View {
         .listStyle(.plain)
     }
 
-    // フィルタ適用中のリストの index は items の index と一致しないため、id 経由で削除する。
+    // 表示中リストの index は items の index と一致しないため、id 経由で削除する。
     private func deleteFiltered(at offsets: IndexSet) {
-        let visible = viewModel.filteredItems
+        let visible = displayedItems
         let targets = offsets.map { visible[$0] }
         for target in targets {
             viewModel.delete(target)
@@ -98,6 +111,12 @@ struct TodoListView: View {
                     viewModel.clearFilter()
                 }
             }
+        } else if !settingsViewModel.settings.showCompletedTodos, !viewModel.items.isEmpty {
+            ContentUnavailableView {
+                Label("未完了の Todo はありません", systemImage: "checkmark.circle")
+            } description: {
+                Text("設定で「完了済みの Todo を表示」をオンにすると一覧に表示されます。")
+            }
         } else {
             ContentUnavailableView {
                 Label("Todo がありません", systemImage: "checklist")
@@ -115,7 +134,9 @@ struct TodoListView: View {
         TodoItem(title: "サンプル 1", categoryId: category.id, tags: ["urgent"]),
         TodoItem(title: "サンプル 2", isCompleted: true, tags: ["done"])
     ]))
+    let settingsVM = AppSettingsViewModel(store: InMemoryAppSettingsStore())
     return TodoListView()
         .environmentObject(todoVM)
         .environmentObject(categoryVM)
+        .environmentObject(settingsVM)
 }

@@ -4,6 +4,7 @@ import SwiftUI
 struct TodoAppApp: App {
     @StateObject private var todoViewModel: TodoListViewModel
     @StateObject private var categoryViewModel: CategoryListViewModel
+    @StateObject private var settingsViewModel: AppSettingsViewModel
 
     init() {
         _todoViewModel = StateObject(
@@ -12,6 +13,9 @@ struct TodoAppApp: App {
         _categoryViewModel = StateObject(
             wrappedValue: CategoryListViewModel(store: UserDefaultsCategoryStore())
         )
+        _settingsViewModel = StateObject(
+            wrappedValue: AppSettingsViewModel(store: UserDefaultsAppSettingsStore())
+        )
     }
 
     var body: some Scene {
@@ -19,6 +23,10 @@ struct TodoAppApp: App {
             ContentView()
                 .environmentObject(todoViewModel)
                 .environmentObject(categoryViewModel)
+                .environmentObject(settingsViewModel)
+                .preferredColorScheme(settingsViewModel.settings.theme.colorScheme)
+                .dynamicTypeSize(settingsViewModel.settings.fontSizeScale.dynamicTypeSize)
+                .tint(settingsViewModel.settings.accentColor)
         }
     }
 }

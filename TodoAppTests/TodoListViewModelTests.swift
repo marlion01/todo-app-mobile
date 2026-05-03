@@ -68,6 +68,19 @@ final class TodoListViewModelTests: XCTestCase {
         XCTAssertTrue(sut.items.isEmpty)
     }
 
+    func test_deleteAll_clearsAllItemsAndPersists() throws {
+        let store = InMemoryTodoStore(items: [
+            TodoItem(title: "A"),
+            TodoItem(title: "B")
+        ])
+        let sut = TodoListViewModel(store: store)
+
+        sut.deleteAll()
+
+        XCTAssertTrue(sut.items.isEmpty)
+        XCTAssertEqual(try store.load(), [])
+    }
+
     func test_pendingCount_excludesCompletedItems() {
         let items = [
             TodoItem(title: "A"),

@@ -57,6 +57,12 @@ final class TodoListViewModel: ObservableObject {
         persist()
     }
 
+    func deleteAll() {
+        guard !items.isEmpty else { return }
+        items.removeAll()
+        persist()
+    }
+
     func update(_ item: TodoItem) {
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         items[index] = item

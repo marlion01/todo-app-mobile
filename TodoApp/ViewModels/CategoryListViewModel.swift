@@ -54,6 +54,12 @@ final class CategoryListViewModel: ObservableObject {
         persist()
     }
 
+    func deleteAll() {
+        guard !categories.isEmpty else { return }
+        categories.removeAll()
+        persist()
+    }
+
     func category(with id: UUID?) -> Category? {
         guard let id else { return nil }
         return categories.first(where: { $0.id == id })

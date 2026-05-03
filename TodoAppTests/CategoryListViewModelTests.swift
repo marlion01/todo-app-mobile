@@ -66,6 +66,19 @@ final class CategoryListViewModelTests: XCTestCase {
         XCTAssertTrue(sut.categories.isEmpty)
     }
 
+    func test_deleteAll_clearsAllCategoriesAndPersists() throws {
+        let store = InMemoryCategoryStore(items: [
+            Category(name: "A"),
+            Category(name: "B")
+        ])
+        let sut = CategoryListViewModel(store: store)
+
+        sut.deleteAll()
+
+        XCTAssertTrue(sut.categories.isEmpty)
+        XCTAssertEqual(try store.load(), [])
+    }
+
     func test_categoryWithId_returnsMatchingCategoryOrNil() {
         let sut = CategoryListViewModel(store: InMemoryCategoryStore())
         guard let category = sut.add(name: "仕事") else {
