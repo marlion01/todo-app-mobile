@@ -34,6 +34,20 @@ final class TodoListViewModelTests: XCTestCase {
         XCTAssertTrue(sut.items.isEmpty)
     }
 
+    func test_add_withCategoryAndTags_normalizesAndDeduplicatesTags() {
+        let categoryId = UUID()
+        let sut = TodoListViewModel(store: InMemoryTodoStore())
+
+        sut.add(
+            title: "task",
+            categoryId: categoryId,
+            tags: ["Work", " urgent ", "WORK", ""]
+        )
+
+        XCTAssertEqual(sut.items.first?.categoryId, categoryId)
+        XCTAssertEqual(sut.items.first?.tags, ["work", "urgent"])
+    }
+
     func test_toggle_flipsCompletion() {
         let item = TodoItem(title: "切り替え対象")
         let sut = TodoListViewModel(store: InMemoryTodoStore(items: [item]))
@@ -63,5 +77,68 @@ final class TodoListViewModelTests: XCTestCase {
         let sut = TodoListViewModel(store: InMemoryTodoStore(items: items))
 
         XCTAssertEqual(sut.pendingCount, 2)
+    }
+
+    // MARK: - フィルタ
+
+    func test_filteredItems_whenFilterInactive_returnsAllItems() {
+        let items = [TodoItem(title: "A"), TodoItem(title: "B")]
+        let sut = TodoListViewModel(store: InMemoryTodoStore(items: items))
+
+        XCTAssertEqual(sut.filteredItems, items)
+    }
+
+    func test_filteredItems_byCategory() {
+        let cat1 = UUID()
+        let cat2 = UUID()
+        let items = [
+            TodoItem(title: "A", categoryId: cat1),
+            TodoItem(title: "B", categoryId: cat2),
+            TodoItem(title: "C", categoryId: nil)
+        ]
+        let sut = TodoListViewModel(store: InMemoryTodoStore(items: items))
+
+        sut.setFilter(category: cat1)
+
+        XCTAssertEqual(sut.filteredItems.map(\.title), ["A"])
+    }
+
+    func test_toggleTag_addsAndRemovesTagInFilter() {
+        let items = [
+            TodoItem(title: "A", tags: ["work", "urgent"]),
+            TodoItem(title: "B", tags: ["work"]),
+            TodoItem(title: "C", tags: ["personal"])
+        ]
+        let sut = TodoListViewModel(store: InMemoryTodoStore(items: items))
+
+        sut.toggleTag("Work") // 正規化されるはず
+        XCTAssertEqual(Set(sut.filteredItems.map(\.title)), ["A", "B"])
+        XCTAssertTrue(sut.filter.tags.contains("work"))
+
+        sut.toggleTag("work")
+        XCTAssertFalse(sut.filter.tags.contains("work"))
+        XCTAssertEqual(sut.filteredItems.count, 3)
+    }
+
+    func test_availableTags_returnsUniqueSorted() {
+        let items = [
+            TodoItem(title: "A", tags: ["b", "a"]),
+            TodoItem(title: "B", tags: ["a", "c"])
+        ]
+        let sut = TodoListViewModel(store: InMemoryTodoStore(items: items))
+
+        XCTAssertEqual(sut.availableTags, ["a", "b", "c"])
+    }
+
+    func test_clearFilter_resetsAllConditions() {
+        let sut = TodoListViewModel(store: InMemoryTodoStore())
+        sut.setFilter(category: UUID())
+        sut.toggleTag("a")
+        sut.setSearchQuery("hello")
+        XCTAssertTrue(sut.filter.isActive)
+
+        sut.clearFilter()
+
+        XCTAssertFalse(sut.filter.isActive)
     }
 }

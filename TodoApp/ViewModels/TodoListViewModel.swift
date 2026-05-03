@@ -1,9 +1,10 @@
-import Foundation
 import Combine
+import Foundation
 
 @MainActor
 final class TodoListViewModel: ObservableObject {
     @Published private(set) var items: [TodoItem] = []
+    @Published var filter: TodoFilter = .none
     @Published var errorMessage: String?
 
     private let store: TodoStore
@@ -21,10 +22,21 @@ final class TodoListViewModel: ObservableObject {
         }
     }
 
-    func add(title: String, dueDate: Date? = nil) {
+    func add(
+        title: String,
+        dueDate: Date? = nil,
+        categoryId: UUID? = nil,
+        tags: [String] = []
+    ) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        let item = TodoItem(title: trimmed, dueDate: dueDate)
+        let normalizedTags = Tag.parse(tags.joined(separator: ","))
+        let item = TodoItem(
+            title: trimmed,
+            dueDate: dueDate,
+            categoryId: categoryId,
+            tags: normalizedTags
+        )
         items.append(item)
         persist()
     }
@@ -53,6 +65,39 @@ final class TodoListViewModel: ObservableObject {
 
     var pendingCount: Int {
         items.filter { !$0.isCompleted }.count
+    }
+
+    // MARK: - フィルタリング (将来のタグ検索／カテゴリ内検索の土台)
+
+    var filteredItems: [TodoItem] {
+        guard filter.isActive else { return items }
+        return items.filter(filter.matches)
+    }
+
+    var availableTags: [String] {
+        Array(Set(items.flatMap(\.tags))).sorted()
+    }
+
+    func setFilter(category: UUID?) {
+        filter.categoryId = category
+    }
+
+    func toggleTag(_ tag: String) {
+        let normalized = Tag.normalize(tag)
+        guard !normalized.isEmpty else { return }
+        if filter.tags.contains(normalized) {
+            filter.tags.remove(normalized)
+        } else {
+            filter.tags.insert(normalized)
+        }
+    }
+
+    func setSearchQuery(_ query: String) {
+        filter.searchQuery = query
+    }
+
+    func clearFilter() {
+        filter = .none
     }
 
     private func persist() {
