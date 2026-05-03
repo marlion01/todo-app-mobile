@@ -1,4 +1,4 @@
-name: Mobile CI
+name: iOS CI
 
 on:
   push:
@@ -7,96 +7,70 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  lint-and-test:
-    runs-on: ubuntu-latest
-    
+  lint:
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Lint
-        run: npm run lint
-      
-      - name: Type check
-        run: npm run type-check
-      
+
+      - name: Install SwiftLint & SwiftFormat
+        run: |
+          brew update
+          brew install swiftlint swiftformat
+
+      - name: SwiftFormat (lint)
+        run: swiftformat --lint TodoApp TodoAppTests TodoAppUITests
+
+      - name: SwiftLint
+        run: swiftlint --strict
+
+  build-and-test:
+    runs-on: macos-14
+    needs: lint
+    env:
+      SCHEME: TodoApp
+      DESTINATION: 'platform=iOS Simulator,name=iPhone 15,OS=latest'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Show available simulators
+        run: xcrun simctl list devices available
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project TodoApp.xcodeproj \
+            -scheme "$SCHEME" \
+            -destination "$DESTINATION" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build | xcbeautify
+
       - name: Test
-        run: npm test -- --coverage --watchAll=false
-      
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project TodoApp.xcodeproj \
+            -scheme "$SCHEME" \
+            -destination "$DESTINATION" \
+            -configuration Debug \
+            -enableCodeCoverage YES \
+            CODE_SIGNING_ALLOWED=NO \
+            test | xcbeautify
+
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        if: always()
+        uses: codecov/codecov-action@v4
         with:
-          file: ./coverage/lcov.info
-          flags: mobile
-
-  ios-build:
-    runs-on: macos-latest
-    needs: lint-and-test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.0'
-          bundler-cache: true
-          working-directory: ios
-      
-      - name: Install CocoaPods
-        run: |
-          cd ios
-          pod install
-      
-      - name: Build iOS (Debug)
-        run: |
-          npx react-native run-ios --configuration Debug --simulator "iPhone 14"
-
-  android-build:
-    runs-on: ubuntu-latest
-    needs: lint-and-test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-      
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-      
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Build Android (Debug)
-        run: |
-          cd android
-          ./gradlew assembleDebug
+          flags: ios
+          fail_ci_if_error: false
